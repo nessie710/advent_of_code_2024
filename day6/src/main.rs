@@ -6,7 +6,9 @@ use std::fs::read_to_string;
 fn main() {
     let filename = "inputs/day6.txt";
     let mut map = Map::new(filename);
+
     map.initialize_guard();
+    let stored_map = map.clone();
 
     while match map.move_guard() {
         Some(_) => true,
@@ -14,42 +16,36 @@ fn main() {
     } {}
 
     let positions: Vec<(usize, usize)> = map.visited_positions.iter().map(|x| x.0).collect();
-    let sum = positions.iter().unique().count();
+    let visited_configs = map.visited_positions.clone();
+    let unique_positions: Vec<(usize, usize)> = positions.into_iter().unique().collect();
+    let sum = unique_positions.iter().count();
     println!("The sum of the visited places is {}", sum);
 
     // Part 2
 
-    let map = Map::new(filename);
-
     let mut count = 0;
-    for i in 0..map.rows {
-        for j in 0..map.columns {
-            if positions.contains(&(i, j))
-                && match Location::from_numeric(map.map[(i, j)]) {
-                    Location::Free => true,
-                    _ => false,
-                }
-            {
-                let mut map = Map::new(filename);
-                //println!("{:?}", map.visited_positions);
-                map.initialize_guard();
-                map.map[(i, j)] = Location::Obstacle.to_numeric();
-                println!("{:?}", (i, j));
-                while match map.move_guard() {
-                    Some(_) => true,
-                    None => false,
-                } {
-                    match map.find_guard() {
-                        Some(x) => {
-                            if map.visited_positions.contains(&(x, map.direction)) {
-                                count += 1;
-                                println!("Count: {}", count);
-                                break;
-                            }
-                        }
-                        None => continue,
+
+    for (i, j) in unique_positions {
+        let mut map = stored_map.clone();
+        //println!("{:?}", map.visited_positions);
+        map.initialize_guard();
+        // map.initial_guard = ((i as i32 - y) as usize, (j as i32 - x) as usize);
+
+        // map.last_intersection = map.initial_guard;
+        // map.current_guard = Some(map.initial_guard);
+        map.map[(i, j)] = Location::Obstacle.to_numeric();
+        // println!("{:?}", (i, j));
+        loop {
+            match map.move_guard() {
+                Some(x) => match map.visited_positions.contains(&(x, map.direction)) {
+                    true => {
+                        count += 1;
+                        // println!("Position: {:?}", (i, j));
+                        break;
                     }
-                }
+                    false => continue,
+                },
+                None => break,
             }
         }
     }
@@ -73,27 +69,18 @@ impl Location {
             Location::Guard => 2,
         }
     }
-
-    // Map numeric representation back to Location
-    fn from_numeric(num: u8) -> Location {
-        match num {
-            1 => Location::Obstacle,
-            0 => Location::Free,
-            _ => Location::Guard,
-        }
-    }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct Map {
     map: na::DMatrix<u8>,
     rows: usize,
     columns: usize,
     direction: (i32, i32),
     initial_guard: (usize, usize),
+    current_guard: Option<(usize, usize)>,
     visited_positions: HashSet<((usize, usize), (i32, i32))>,
     last_intersection: (usize, usize),
-    last_direction: (i32, i32),
 }
 
 impl Map {
@@ -124,15 +111,16 @@ impl Map {
             columns: columns,
             direction: (0, -1),
             initial_guard: (0, 0),
+            current_guard: Some((0, 0)),
             visited_positions: HashSet::new(),
             last_intersection: (0, 0),
-            last_direction: (0, -1),
         };
     }
 
     fn initialize_guard(&mut self) {
         self.initial_guard = self.find_guard().unwrap();
         self.last_intersection = self.initial_guard;
+        self.current_guard = Some(self.initial_guard);
     }
 
     fn find_guard(&self) -> Option<(usize, usize)> {
@@ -163,14 +151,13 @@ impl Map {
         return None;
     }
 
-    fn move_guard(&mut self) -> Option<u8> {
-        let current = match self.find_guard() {
-            Some(x) => x,
-            None => return None,
-        };
+    fn move_guard(&mut self) -> Option<(usize, usize)> {
+        // if self.current_guard == None {
+        //     return None;
+        // }
 
-        let mut newx = current.1 as i32 + self.direction.0;
-        let mut newy = current.0 as i32 + self.direction.1;
+        let mut newx = self.current_guard.unwrap().1 as i32 + self.direction.0;
+        let mut newy = self.current_guard.unwrap().0 as i32 + self.direction.1;
 
         for _ in 0..4 {
             if newx < self.columns as i32
@@ -183,19 +170,24 @@ impl Map {
                     Some(x) => x,
                     None => self.direction,
                 };
-                //return Some(1);
-                newx = current.1 as i32 + self.direction.0;
-                newy = current.0 as i32 + self.direction.1;
+
+                newx = self.current_guard.unwrap().1 as i32 + self.direction.0;
+                newy = self.current_guard.unwrap().0 as i32 + self.direction.1;
             } else {
                 break;
             }
         }
         // println!("Direction : {:?}", self.direction);
-        self.map[current] = Location::Free.to_numeric();
-        self.visited_positions.insert((current, self.direction));
+        self.map[self.current_guard.unwrap()] = Location::Free.to_numeric();
+        self.visited_positions
+            .insert((self.current_guard.unwrap(), self.direction));
         if newx < self.columns as i32 && newx >= 0 && newy >= 0 && newy < self.rows as i32 {
-            self.map[(newy as usize, newx as usize)] = Location::Guard.to_numeric()
-        };
-        return Some(1);
+            self.map[(newy as usize, newx as usize)] = Location::Guard.to_numeric();
+            self.current_guard = Some((newy as usize, newx as usize));
+        } else {
+            self.current_guard = None;
+        }
+
+        return self.current_guard;
     }
 }
