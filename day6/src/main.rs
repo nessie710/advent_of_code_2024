@@ -16,7 +16,6 @@ fn main() {
     } {}
 
     let positions: Vec<(usize, usize)> = map.visited_positions.iter().map(|x| x.0).collect();
-    let visited_configs = map.visited_positions.clone();
     let unique_positions: Vec<(usize, usize)> = positions.into_iter().unique().collect();
     let sum = unique_positions.iter().count();
     println!("The sum of the visited places is {}", sum);
@@ -27,20 +26,13 @@ fn main() {
 
     for (i, j) in unique_positions {
         let mut map = stored_map.clone();
-        //println!("{:?}", map.visited_positions);
         map.initialize_guard();
-        // map.initial_guard = ((i as i32 - y) as usize, (j as i32 - x) as usize);
-
-        // map.last_intersection = map.initial_guard;
-        // map.current_guard = Some(map.initial_guard);
         map.map[(i, j)] = Location::Obstacle.to_numeric();
-        // println!("{:?}", (i, j));
         loop {
             match map.move_guard() {
                 Some(x) => match map.visited_positions.contains(&(x, map.direction)) {
                     true => {
                         count += 1;
-                        // println!("Position: {:?}", (i, j));
                         break;
                     }
                     false => continue,
@@ -124,17 +116,13 @@ impl Map {
     }
 
     fn find_guard(&self) -> Option<(usize, usize)> {
-        // println!("Searching for guard:");
         for (i, row) in self.map.row_iter().enumerate() {
             for (j, value) in row.iter().enumerate() {
-                // println!("Checking cell ({}, {}) = {}", i, j, value); // Debug
                 if *value == Location::Guard.to_numeric() {
-                    // println!("Guard found at ({}, {})", i, j); // Debug
                     return Some((i, j));
                 }
             }
         }
-        // println!("Guard not found."); // Debug
         return None;
     }
 
@@ -152,10 +140,6 @@ impl Map {
     }
 
     fn move_guard(&mut self) -> Option<(usize, usize)> {
-        // if self.current_guard == None {
-        //     return None;
-        // }
-
         let mut newx = self.current_guard.unwrap().1 as i32 + self.direction.0;
         let mut newy = self.current_guard.unwrap().0 as i32 + self.direction.1;
 
@@ -177,7 +161,6 @@ impl Map {
                 break;
             }
         }
-        // println!("Direction : {:?}", self.direction);
         self.map[self.current_guard.unwrap()] = Location::Free.to_numeric();
         self.visited_positions
             .insert((self.current_guard.unwrap(), self.direction));
