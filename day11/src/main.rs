@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::fs::read_to_string;
 
 fn main() {
-    let path = "inputs/day11_test.txt";
+    let path = "inputs/day11.txt";
     let file = read_to_string(path).unwrap();
     let stones: Vec<u64> = file
         .strip_suffix("\n")
@@ -17,7 +17,7 @@ fn main() {
         stone_map.insert(stone, 1);
     }
 
-    for i in 0..6 {
+    for i in 0..75 {
         stone_map = update(stone_map);
     }
 
@@ -27,60 +27,72 @@ fn main() {
 }
 
 fn update(stones: HashMap<u64, u64>) -> HashMap<u64, u64> {
+    let mut diff: HashMap<u64, u64> = HashMap::new();
     let mut output = stones.clone();
-    println!("{:?}", stones);
-    for stone in stones.keys() {
-        if *stone == 0 {
-            let num = output.get(stone).unwrap().clone();
-            if let Some(val) = output.get_mut(stone) {
+    for &stone in stones.keys() {
+        if stone == 0 {
+            let num = stones.get(&stone).unwrap().clone();
+            if let Some(val) = output.get_mut(&stone) {
                 *val = 0;
             }
-            match output.get_mut(&1) {
+            match diff.get_mut(&1) {
                 Some(val) => {
                     *val += num;
                 }
                 None => {
-                    output.insert(1, num);
+                    diff.insert(1, num);
                 }
             }
-        } else if count_digits(stone) % 2 == 0 {
-            let left = digits(*stone).0;
-            let right = digits(*stone).1;
-            let num = output.get(stone).unwrap().clone();
-            if let Some(val) = output.get_mut(stone) {
+        } else if count_digits(&stone) % 2 == 0 {
+            let left = digits(stone).0;
+            let right = digits(stone).1;
+            let num = output.get(&stone).unwrap().clone();
+            if let Some(val) = output.get_mut(&stone) {
                 *val = 0;
             }
-            match output.get_mut(&left) {
+            match diff.get_mut(&left) {
                 Some(val) => {
                     *val += num;
                 }
                 None => {
-                    output.insert(left, num);
+                    diff.insert(left, num);
                 }
             }
-            match output.get_mut(&right) {
+            match diff.get_mut(&right) {
                 Some(val) => {
                     *val += num;
                 }
                 None => {
-                    output.insert(right, num);
+                    diff.insert(right, num);
                 }
             }
         } else {
-            let num = output.get(stone).unwrap().clone();
-            if let Some(val) = output.get_mut(stone) {
+            let num = output.get(&stone).unwrap().clone();
+            if let Some(val) = output.get_mut(&stone) {
                 *val = 0;
             }
-            match output.get_mut(&(*stone * 2024)) {
+            match diff.get_mut(&(stone * 2024)) {
                 Some(val) => {
                     *val += num;
                 }
                 None => {
-                    output.insert(*stone * 2024, num);
+                    diff.insert(stone * 2024, num);
                 }
             }
         }
     }
+
+    for key in diff.keys(){
+        match output.get_mut(key){
+            Some(val) =>{
+                *val+=diff.get(key).unwrap();
+            }
+            None => {
+                output.insert(*key,*diff.get(key).unwrap());
+            }
+        }
+    }
+    
     return output;
 }
 
